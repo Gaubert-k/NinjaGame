@@ -1,0 +1,67 @@
+{% extends 'gameforge/base.html' %}
+
+{% block title %}Dashboard - GameForge{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>My Game Concepts</h1>
+    <div>
+        <a href="{% url 'create_game' %}" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle me-1"></i> Create New Game
+        </a>
+        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-random me-1"></i> Generate Random
+        </a>
+    </div>
+</div>
+
+{% if games %}
+<div class="row">
+    {% for game in games %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            {% if game.images.exists %}
+            <img src="{{ game.images.first.image.url }}" class="card-img-top game-card-img" alt="{{ game.title }}">
+            {% else %}
+            <div class="card-img-top game-card-img bg-secondary d-flex align-items-center justify-content-center">
+                <i class="fas fa-gamepad fa-3x text-white"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h5 class="card-title">{{ game.title }}</h5>
+                    <span class="badge {% if game.is_public %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if game.is_public %}Public{% else %}Private{% endif %}
+                    </span>
+                </div>
+                <p class="card-text">
+                    <span class="badge bg-primary">{{ game.get_genre_display }}</span>
+                    <span class="badge bg-secondary">{{ game.get_ambiance_display }}</span>
+                </p>
+                <p class="card-text">{{ game.story_premise|truncatechars:100 }}</p>
+                <p class="card-text"><small class="text-muted">Created on {{ game.created_at|date:"M d, Y" }}</small></p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <div class="btn-group w-100">
+                    <a href="{% url 'game_detail' game.id %}" class="btn btn-primary">View</a>
+                    <a href="{% url 'edit_game' game.id %}" class="btn btn-outline-primary">Edit</a>
+                    <a href="{% url 'delete_game' game.id %}" class="btn btn-outline-danger">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if forloop.counter|divisibleby:3 and not forloop.last %}
+    </div><div class="row mt-4">
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You haven't created any games yet. Start by creating your first game concept!</p>
+    <div class="mt-3">
+        <a href="{% url 'create_game' %}" class="btn btn-primary me-2">Create New Game</a>
+        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary">Generate Random Game</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

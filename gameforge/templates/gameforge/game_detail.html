@@ -1,0 +1,236 @@
+{% extends 'gameforge/base.html' %}
+
+{% block title %}{{ game.title }} - GameForge{% endblock %}
+
+{% block extra_css %}
+<style>
+    .story-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .character-card, .location-card {
+        height: 100%;
+    }
+    .favorite-btn {
+        cursor: pointer;
+    }
+    .favorite-btn i {
+        transition: color 0.3s;
+    }
+    .favorite-btn.active i {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="mb-0">{{ game.title }}</h1>
+        <p class="text-muted">Created by {{ game.creator.username }} on {{ game.created_at|date:"F d, Y" }}</p>
+    </div>
+    <div class="d-flex align-items-center">
+        {% if user.is_authenticated %}
+        <span class="favorite-btn me-3 {% if is_favorite %}active{% endif %}" data-game-id="{{ game.id }}">
+            <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart fa-2x"></i>
+        </span>
+        {% endif %}
+        
+        {% if user == game.creator %}
+        <div class="btn-group">
+            <a href="{% url 'edit_game' game.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Edit
+            </a>
+            <a href="{% url 'delete_game' game.id %}" class="btn btn-outline-danger">
+                <i class="fas fa-trash-alt me-1"></i> Delete
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">Game Overview</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-primary me-1">{{ game.get_genre_display }}</span>
+                    <span class="badge bg-secondary me-1">{{ game.get_ambiance_display }}</span>
+                    <span class="badge {% if game.is_public %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if game.is_public %}Public{% else %}Private{% endif %}
+                    </span>
+                </div>
+                
+                <h5>Keywords</h5>
+                <p>{{ game.keywords }}</p>
+                
+                {% if game.references %}
+                <h5>References</h5>
+                <p>{{ game.references }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">Story</h3>
+            </div>
+            <div class="card-body">
+                <div class="story-section">
+                    <h4>Premise</h4>
+                    <p>{{ game.story_premise }}</p>
+                </div>
+                
+                <div class="story-section">
+                    <h4>Act 1</h4>
+                    <p>{{ game.story_act1 }}</p>
+                </div>
+                
+                <div class="story-section">
+                    <h4>Act 2</h4>
+                    <p>{{ game.story_act2 }}</p>
+                </div>
+                
+                <div class="story-section">
+                    <h4>Act 3</h4>
+                    <p>{{ game.story_act3 }}</p>
+                </div>
+                
+                <div class="story-section">
+                    <h4>Twist</h4>
+                    <p>{{ game.story_twist }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        {% if images %}
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">Concept Art</h3>
+            </div>
+            <div class="card-body p-0">
+                <div id="gameImageCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        {% for image in images %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{{ image.image.url }}" class="d-block w-100" alt="{{ image.get_image_type_display }}">
+                            <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-75 rounded">
+                                <h5>{{ image.get_image_type_display }}</h5>
+                                <p class="small">{{ image.prompt|truncatechars:100 }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#gameImageCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#gameImageCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Characters</h2>
+    </div>
+    
+    {% if characters %}
+    {% for character in characters %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card character-card">
+            <div class="card-header">
+                <h4 class="mb-0">{{ character.name }}</h4>
+                <div class="small text-muted">{{ character.character_class }} - {{ character.role }}</div>
+            </div>
+            <div class="card-body">
+                <h5>Background</h5>
+                <p>{{ character.background }}</p>
+                
+                <h5>Gameplay</h5>
+                <p>{{ character.gameplay }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">No characters have been created for this game yet.</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h2>Locations</h2>
+    </div>
+    
+    {% if locations %}
+    {% for location in locations %}
+    <div class="col-md-6 mb-4">
+        <div class="card location-card">
+            <div class="card-header">
+                <h4 class="mb-0">{{ location.name }}</h4>
+            </div>
+            <div class="card-body">
+                <p>{{ location.description }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">No locations have been created for this game yet.</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Favorite button functionality
+        $('.favorite-btn').click(function() {
+            const gameId = $(this).data('game-id');
+            const btn = $(this);
+            
+            $.ajax({
+                url: `/game/${gameId}/toggle-favorite/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        if (data.is_favorite) {
+                            btn.addClass('active');
+                            btn.find('i').removeClass('far').addClass('fas');
+                        } else {
+                            btn.removeClass('active');
+                            btn.find('i').removeClass('fas').addClass('far');
+                        }
+                    } else {
+                        alert(data.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

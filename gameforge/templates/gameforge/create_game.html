@@ -1,0 +1,79 @@
+{% extends 'gameforge/base.html' %}
+
+{% block title %}Create New Game - GameForge{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">Create New Game Concept</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                        {{ form.title.errors }}
+                        <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control" required>
+                        <small class="form-text text-muted">Give your game a catchy title</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.genre.id_for_label }}" class="form-label">Genre</label>
+                            {{ form.genre.errors }}
+                            <select name="{{ form.genre.name }}" id="{{ form.genre.id_for_label }}" class="form-select" required>
+                                {% for value, text in form.fields.genre.choices %}
+                                <option value="{{ value }}">{{ text }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.ambiance.id_for_label }}" class="form-label">Ambiance</label>
+                            {{ form.ambiance.errors }}
+                            <select name="{{ form.ambiance.name }}" id="{{ form.ambiance.id_for_label }}" class="form-select" required>
+                                {% for value, text in form.fields.ambiance.choices %}
+                                <option value="{{ value }}">{{ text }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.keywords.id_for_label }}" class="form-label">Keywords</label>
+                        {{ form.keywords.errors }}
+                        <input type="text" name="{{ form.keywords.name }}" id="{{ form.keywords.id_for_label }}" class="form-control" placeholder="Enter keywords separated by commas" required>
+                        <small class="form-text text-muted">These keywords will guide the AI in generating your game concept</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.references.id_for_label }}" class="form-label">References (Optional)</label>
+                        {{ form.references.errors }}
+                        <input type="text" name="{{ form.references.name }}" id="{{ form.references.id_for_label }}" class="form-control" placeholder="Enter references separated by commas (optional)">
+                        <small class="form-text text-muted">Mention games or media that inspire your concept</small>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="{{ form.is_public.name }}" id="{{ form.is_public.id_for_label }}" class="form-check-input" checked>
+                        <label for="{{ form.is_public.id_for_label }}" class="form-check-label">Make this game public</label>
+                        <small class="d-block form-text text-muted">Public games will be visible to all users on the home page</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> After submitting, our AI will generate a complete game concept including story, characters, locations, and concept art based on your inputs.
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-magic me-2"></i> Generate Game Concept
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

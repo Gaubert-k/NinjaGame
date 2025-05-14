@@ -1,0 +1,91 @@
+{% extends 'gameforge/base.html' %}
+
+{% block title %}My Favorites - GameForge{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>My Favorite Games</h1>
+</div>
+
+{% if favorites %}
+<div class="row">
+    {% for favorite in favorites %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            {% if favorite.game.images.exists %}
+            <img src="{{ favorite.game.images.first.image.url }}" class="card-img-top game-card-img" alt="{{ favorite.game.title }}">
+            {% else %}
+            <div class="card-img-top game-card-img bg-secondary d-flex align-items-center justify-content-center">
+                <i class="fas fa-gamepad fa-3x text-white"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ favorite.game.title }}</h5>
+                <p class="card-text">
+                    <span class="badge bg-primary">{{ favorite.game.get_genre_display }}</span>
+                    <span class="badge bg-secondary">{{ favorite.game.get_ambiance_display }}</span>
+                </p>
+                <p class="card-text">{{ favorite.game.story_premise|truncatechars:100 }}</p>
+                <p class="card-text"><small class="text-muted">Created by {{ favorite.game.creator.username }} on {{ favorite.game.created_at|date:"M d, Y" }}</small></p>
+                <p class="card-text"><small class="text-muted">Added to favorites on {{ favorite.created_at|date:"M d, Y" }}</small></p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'game_detail' favorite.game.id %}" class="btn btn-primary">View Details</a>
+                    <button class="btn btn-outline-danger remove-favorite" data-game-id="{{ favorite.game.id }}">
+                        <i class="fas fa-heart-broken"></i> Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if forloop.counter|divisibleby:3 and not forloop.last %}
+    </div><div class="row mt-4">
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You haven't added any games to your favorites yet.</p>
+    <a href="{% url 'home' %}" class="btn btn-primary mt-2">Browse Games</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Remove favorite functionality
+        $('.remove-favorite').click(function() {
+            const gameId = $(this).data('game-id');
+            const card = $(this).closest('.col-md-4');
+            
+            $.ajax({
+                url: `/game/${gameId}/toggle-favorite/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(data) {
+                    if (data.status === 'success') {
+                        // Remove the card with animation
+                        card.fadeOut(300, function() {
+                            $(this).remove();
+                            
+                            // Check if there are no more favorites
+                            if ($('.col-md-4').length === 0) {
+                                location.reload(); // Reload to show the "no favorites" message
+                            }
+                        });
+                    } else {
+                        alert(data.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
