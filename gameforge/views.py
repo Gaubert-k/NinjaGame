@@ -1,3 +1,5 @@
+import uuid
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
@@ -6,6 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 
+from .ai_utils import generate_story, generate_characters, generate_locations, generate_placeholder_image
 from .models import Game, Character, Location, GameImage, Favorite
 from .forms import GameForm, CharacterForm, LocationForm, GameImageForm
 
@@ -177,70 +180,88 @@ def random_game(request):
 
     return render(request, 'gameforge/random_game.html')
 
+
 def generate_game_content(game, random=False):
     """Helper function to generate game content using AI"""
-    # This is a placeholder for the actual AI integration
-    # In a real implementation, this would call the Hugging Face API
+    # Utiliser les fonctions AI pour générer du contenu
 
-    # For now, we'll just create some dummy content
-    if random:
-        game.title = "Randomly Generated Adventure"
-        game.genre = Game.GENRE_CHOICES[2][0]  # Adventure
-        game.ambiance = Game.AMBIANCE_CHOICES[1][0]  # Fantasy
-        game.keywords = "random, adventure, fantasy"
+    # Générer l'histoire avec l'IA
+    story = generate_story(
+        title=game.title,
+        genre=game.genre,
+        ambiance=game.ambiance,
+        keywords=game.keywords,
+        refs=game.references,
+        random_mode=random
+    )
 
-    # Generate story
-    game.story_premise = "A hero embarks on a journey to save the world from an ancient evil."
-    game.story_act1 = "The hero discovers their destiny and sets out on a quest."
-    game.story_act2 = "The hero faces challenges and makes allies along the way."
-    game.story_act3 = "The hero confronts the ancient evil in an epic battle."
-    game.story_twist = "The ancient evil is revealed to be the hero's long-lost relative."
+    # Mettre à jour les champs du jeu avec l'histoire générée
+    game.title = story["title"] if random else game.title
+    game.story_premise = story["premise"]
+    game.story_act1 = story["act1"]
+    game.story_act2 = story["act2"]
+    game.story_act3 = story["act3"]
+    game.story_twist = story["twist"]
     game.save()
 
-    # Generate characters
-    Character.objects.create(
-        game=game,
-        name="Hero",
-        character_class="Warrior",
-        role="Protagonist",
-        background="A simple farmer who discovers they have a great destiny.",
-        gameplay="Strong melee attacks and defensive abilities."
+    # Générer des personnages avec l'IA (2 par défaut: un protagoniste et un antagoniste)
+    characters = generate_characters(game_genre=game.genre, count=2)
+
+    # Créer les objets Character dans la base de données
+    for char_data in characters:
+        Character.objects.create(
+            game=game,
+            name=char_data["name"],
+            character_class=char_data["character_class"],
+            role=char_data["role"],
+            background=char_data["background"],
+            gameplay=char_data["gameplay"]
+        )
+
+    # Générer des lieux avec l'IA
+    locations = generate_locations(game_ambiance=game.ambiance, count=2)
+
+    # Créer les objets Location dans la base de données
+    for loc_data in locations:
+        Location.objects.create(
+            game=game,
+            name=loc_data["name"],
+            description=loc_data["description"]
+        )
+
+    # Générer des images placeholder pour les personnages et les lieux
+    # (dans un déploiement réel, vous appelleriez une API de génération d'images)
+
+    # Image pour le protagoniste
+    char_prompt = f"Un héros {game.genre} dans un univers {game.ambiance}"
+    char_filename = f"character_{game.id}_{uuid.uuid4().hex}.jpg"
+    char_image_path = generate_placeholder_image(
+        prompt=char_prompt,
+        image_type="CHARACTER",
+        filename=char_filename
     )
 
-    Character.objects.create(
-        game=game,
-        name="Villain",
-        character_class="Sorcerer",
-        role="Antagonist",
-        background="An ancient evil seeking to conquer the world.",
-        gameplay="Powerful magic attacks and summoning abilities."
-    )
-
-    # Generate locations
-    Location.objects.create(
-        game=game,
-        name="Starting Village",
-        description="A peaceful village where the hero begins their journey."
-    )
-
-    Location.objects.create(
-        game=game,
-        name="Ancient Temple",
-        description="A mysterious temple filled with traps and treasures."
-    )
-
-    # In a real implementation, we would also generate images using an AI model
-    # For now, we'll just create placeholder entries
+    # Créer l'objet GameImage pour le personnage
     GameImage.objects.create(
         game=game,
         image_type="CHARACTER",
-        prompt="A heroic warrior with a sword and shield",
-        image="placeholder.jpg"  # This would be replaced with an actual generated image
+        prompt=char_prompt,
+        image=char_image_path
     )
 
+    # Image pour un lieu
+    loc_prompt = f"Un lieu {game.ambiance} pour une aventure {game.genre}"
+    loc_filename = f"location_{game.id}_{uuid.uuid4().hex}.jpg"
+    loc_image_path = generate_placeholder_image(
+        prompt=loc_prompt,
+        image_type="LOCATION",
+        filename=loc_filename
+    )
+
+    # Créer l'objet GameImage pour le lieu
     GameImage.objects.create(
         game=game,
         image_type="LOCATION",
-        prompt="An ancient temple in a lush forest",
-        image="placeholder.jpg"  # This would be replaced with an actual generated image
+        prompt=loc_prompt,
+        image=loc_image_path
     )

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.cache import cache
 
 # Create your models here.
 class Game(models.Model):
@@ -97,3 +98,39 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f"{self.user.username} favorited {self.game.title}"
+
+class AISettings(models.Model):
+    """Model to store AI settings for the application."""
+    use_remote_llm = models.BooleanField(default=False, help_text="Use remote LLM instead of local model")
+    remote_llm_url = models.CharField(max_length=255, default="http://176.144.45.42:80", 
+                                     help_text="URL of the remote LLM API")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "AI Settings"
+        verbose_name_plural = "AI Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure there's only one instance of AISettings
+        if not self.pk and AISettings.objects.exists():
+            # If you're trying to create a new object and one already exists,
+            # update the existing one instead
+            self.pk = AISettings.objects.first().pk
+
+        # Clear the cache when settings are updated
+        cache.delete('ai_settings')
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get the AI settings, using cache if available."""
+        settings = cache.get('ai_settings')
+        if settings is None:
+            settings, created = cls.objects.get_or_create(pk=1)
+            cache.set('ai_settings', settings)
+        return settings
+
+    def __str__(self):
+        return "AI Settings"

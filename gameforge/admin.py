@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Game, Character, Location, GameImage, Favorite
+from .models import Game, Character, Location, GameImage, Favorite, AISettings
 
 # Register your models here.
 class CharacterInline(admin.TabularInline):
@@ -49,3 +49,15 @@ class FavoriteAdmin(admin.ModelAdmin):
     list_display = ('user', 'game', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('user__username', 'game__title')
+
+@admin.register(AISettings)
+class AISettingsAdmin(admin.ModelAdmin):
+    list_display = ('use_remote_llm', 'remote_llm_url', 'updated_at')
+
+    def has_add_permission(self, request):
+        # Only allow adding if no AISettings exist yet
+        return not AISettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the settings
+        return False
