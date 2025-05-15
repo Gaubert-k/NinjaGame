@@ -1,16 +1,16 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Dashboard - GameForge{% endblock %}
+{% block title %}Tableau de Bord - GameForge{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>My Game Concepts</h1>
+    <h1>Mes Concepts de Jeux</h1>
     <div>
         <a href="{% url 'create_game' %}" class="btn btn-primary me-2">
-            <i class="fas fa-plus-circle me-1"></i> Create New Game
+            <i class="fas fa-plus-circle me-1"></i> Créer un Nouveau Jeu
         </a>
         <a href="{% url 'random_game' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-random me-1"></i> Generate Random
+            <i class="fas fa-random me-1"></i> Générer Aléatoirement
         </a>
     </div>
 </div>
@@ -31,7 +31,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <h5 class="card-title">{{ game.title }}</h5>
                     <span class="badge {% if game.is_public %}bg-success{% else %}bg-danger{% endif %}">
-                        {% if game.is_public %}Public{% else %}Private{% endif %}
+                        {% if game.is_public %}Public{% else %}Privé{% endif %}
                     </span>
                 </div>
                 <p class="card-text">
@@ -39,13 +39,13 @@
                     <span class="badge bg-secondary">{{ game.get_ambiance_display }}</span>
                 </p>
                 <p class="card-text">{{ game.story_premise|truncatechars:100 }}</p>
-                <p class="card-text"><small class="text-muted">Created on {{ game.created_at|date:"M d, Y" }}</small></p>
+                <p class="card-text"><small class="text-muted">Créé le {{ game.created_at|date:"d M Y" }}</small></p>
             </div>
             <div class="card-footer bg-transparent border-top-0">
                 <div class="btn-group w-100">
-                    <a href="{% url 'game_detail' game.id %}" class="btn btn-primary">View</a>
-                    <a href="{% url 'edit_game' game.id %}" class="btn btn-outline-primary">Edit</a>
-                    <a href="{% url 'delete_game' game.id %}" class="btn btn-outline-danger">Delete</a>
+                    <a href="{% url 'game_detail' game.id %}" class="btn btn-primary">Voir</a>
+                    <a href="{% url 'edit_game' game.id %}" class="btn btn-outline-primary">Modifier</a>
+                    <a href="{% url 'delete_game' game.id %}" class="btn btn-outline-danger">Supprimer</a>
                 </div>
             </div>
         </div>
@@ -57,10 +57,10 @@
 </div>
 {% else %}
 <div class="alert alert-info">
-    <p>You haven't created any games yet. Start by creating your first game concept!</p>
+    <p>Vous n'avez pas encore créé de jeux. Commencez par créer votre premier concept de jeu !</p>
     <div class="mt-3">
-        <a href="{% url 'create_game' %}" class="btn btn-primary me-2">Create New Game</a>
-        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary">Generate Random Game</a>
+        <a href="{% url 'create_game' %}" class="btn btn-primary me-2">Créer un Nouveau Jeu</a>
+        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary">Générer un Jeu Aléatoire</a>
     </div>
 </div>
 {% endif %}

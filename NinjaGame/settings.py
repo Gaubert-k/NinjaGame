@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
+from transformers import pipeline
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -76,10 +78,15 @@ WSGI_APPLICATION = 'NinjaGame.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ninjagame',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
 
 
 # Password validation
@@ -137,3 +144,4 @@ LOGOUT_REDIRECT_URL = 'home'
 # AI Settings
 REMOTE_LLM_URL = os.environ.get('REMOTE_LLM_URL', 'http://localhost:80')
 USE_REMOTE_LLM = os.environ.get('USE_REMOTE_LLM', 'False').lower() == 'true'
+HUGGINGFACE_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', '')

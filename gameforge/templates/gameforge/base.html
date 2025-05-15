@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,29 +10,11 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <style>
-        body {
-            padding-top: 56px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-color: #f8f9fa;
-        }
-        .content {
-            flex: 1;
-        }
-        .navbar-brand {
-            font-weight: bold;
-            color: #6f42c1 !important;
-        }
-        .game-card-img {
-            height: 200px;
-            object-fit: cover;
-        }
-    </style>
+    <!-- Retro Gaming CSS -->
+    <link rel="stylesheet" href="{% static 'css/retro-gaming.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -48,20 +30,20 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                        <a class="nav-link" href="{% url 'home' %}">Accueil</a>
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+                        <a class="nav-link" href="{% url 'dashboard' %}">Tableau de Bord</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'favorites' %}">Favorites</a>
+                        <a class="nav-link" href="{% url 'favorites' %}">Favoris</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'create_game' %}">Create Game</a>
+                        <a class="nav-link" href="{% url 'create_game' %}">Créer un Jeu</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'random_game' %}">Random Game</a>
+                        <a class="nav-link" href="{% url 'random_game' %}">Jeu Aléatoire</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -72,17 +54,17 @@
                             <i class="fas fa-user me-1"></i>{{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{% url 'dashboard' %}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'dashboard' %}">Tableau de Bord</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Déconnexion</a></li>
                         </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="nav-link" href="{% url 'login' %}">Connexion</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                        <a class="nav-link" href="{% url 'register' %}">Inscription</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -109,7 +91,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container text-center">
-            <p>&copy; 2023 GameForge - AI-Powered Game Concept Generator</p>
+            <p>&copy; 1981 GameForge - Générateur de Concepts de Jeux Propulsé par l'IA</p>
         </div>
     </footer>
 
@@ -117,7 +99,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

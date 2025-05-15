@@ -1,20 +1,17 @@
 import uuid
 
+from django.contrib.auth import logout
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.db.models import Count
 
 from .ai_utils import generate_story, generate_characters, generate_locations, generate_placeholder_image
 from .models import Game, Character, Location, GameImage, Favorite
-from .forms import GameForm, CharacterForm, LocationForm, GameImageForm
+from .forms import GameForm
 
-import requests
-import json
-import os
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -23,7 +20,7 @@ load_dotenv()
 # Create your views here.
 def home(request):
     """Home page view showing all public games"""
-    games = Game.objects.filter(is_public=True).order_by('-created_at')
+    games = Game.objects.filter(is_public=True).exclude(is_public=0).order_by('-created_at')
     return render(request, 'gameforge/home.html', {'games': games})
 
 def register(request):
@@ -33,7 +30,7 @@ def register(request):
         if form.is_valid():
             form.save()
             username = form.cleaned_data.get('username')
-            messages.success(request, f'Account created for {username}! You can now log in.')
+            messages.success(request, f'Compte créé pour {username}! Vous pouvez maintenant vous connecter.')
             return redirect('login')
     else:
         form = UserCreationForm()
@@ -51,7 +48,7 @@ def game_detail(request, game_id):
 
     # Check if the game is private and the user is not the creator
     if not game.is_public and (not request.user.is_authenticated or request.user != game.creator):
-        messages.error(request, "You don't have permission to view this game.")
+        messages.error(request, "Vous n'avez pas la permission de voir ce jeu.")
         return redirect('home')
 
     # Check if the game is in the user's favorites
@@ -84,7 +81,7 @@ def create_game(request):
             # Generate game content using AI
             generate_game_content(game)
 
-            messages.success(request, f'Game "{game.title}" created successfully!')
+            messages.success(request, f'Jeu "{game.title}" créé avec succès!')
             return redirect('game_detail', game_id=game.id)
     else:
         form = GameForm()
@@ -98,14 +95,14 @@ def edit_game(request, game_id):
 
     # Check if the user is the creator of the game
     if request.user != game.creator:
-        messages.error(request, "You don't have permission to edit this game.")
+        messages.error(request, "Vous n'avez pas la permission de modifier ce jeu.")
         return redirect('game_detail', game_id=game.id)
 
     if request.method == 'POST':
         form = GameForm(request.POST, instance=game)
         if form.is_valid():
             form.save()
-            messages.success(request, f'Game "{game.title}" updated successfully!')
+            messages.success(request, f'Jeu "{game.title}" mis à jour avec succès!')
             return redirect('game_detail', game_id=game.id)
     else:
         form = GameForm(instance=game)
@@ -119,12 +116,12 @@ def delete_game(request, game_id):
 
     # Check if the user is the creator of the game
     if request.user != game.creator:
-        messages.error(request, "You don't have permission to delete this game.")
+        messages.error(request, "Vous n'avez pas la permission de supprimer ce jeu.")
         return redirect('game_detail', game_id=game.id)
 
     if request.method == 'POST':
         game.delete()
-        messages.success(request, f'Game "{game.title}" deleted successfully!')
+        messages.success(request, f'Jeu "{game.title}" supprimé avec succès!')
         return redirect('dashboard')
 
     return render(request, 'gameforge/delete_game.html', {'game': game})
@@ -143,7 +140,7 @@ def toggle_favorite(request, game_id):
 
     # Check if the game is private and the user is not the creator
     if not game.is_public and request.user != game.creator:
-        return JsonResponse({'status': 'error', 'message': "You don't have permission to favorite this game."})
+        return JsonResponse({'status': 'error', 'message': "Vous n'avez pas la permission d'ajouter ce jeu aux favoris."})
 
     favorite, created = Favorite.objects.get_or_create(user=request.user, game=game)
 
@@ -175,7 +172,7 @@ def random_game(request):
         # Generate game content using AI
         generate_game_content(game, random=True)
 
-        messages.success(request, f'Random game "{game.title}" created successfully!')
+        messages.success(request, f'Jeu aléatoire "{game.title}" créé avec succès!')
         return redirect('game_detail', game_id=game.id)
 
     return render(request, 'gameforge/random_game.html')
@@ -233,7 +230,7 @@ def generate_game_content(game, random=False):
     # (dans un déploiement réel, vous appelleriez une API de génération d'images)
 
     # Image pour le protagoniste
-    char_prompt = f"Un héros {game.genre} dans un univers {game.ambiance}"
+    char_prompt = f"Un héros de type {game.genre} dans un univers {game.ambiance}"
     char_filename = f"character_{game.id}_{uuid.uuid4().hex}.jpg"
     char_image_path = generate_placeholder_image(
         prompt=char_prompt,
@@ -250,7 +247,7 @@ def generate_game_content(game, random=False):
     )
 
     # Image pour un lieu
-    loc_prompt = f"Un lieu {game.ambiance} pour une aventure {game.genre}"
+    loc_prompt = f"Un lieu d'ambiance {game.ambiance} pour une aventure de type {game.genre}"
     loc_filename = f"location_{game.id}_{uuid.uuid4().hex}.jpg"
     loc_image_path = generate_placeholder_image(
         prompt=loc_prompt,
@@ -265,3 +262,7 @@ def generate_game_content(game, random=False):
         prompt=loc_prompt,
         image=loc_image_path
     )
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')

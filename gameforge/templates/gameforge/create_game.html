@@ -1,25 +1,25 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Create New Game - GameForge{% endblock %}
+{% block title %}Créer un nouveau jeu - GameForge{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Create New Game Concept</h3>
+                <h3 class="mb-0">Créer un nouveau concept de jeu </h3>
             </div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre</label>
                         {{ form.title.errors }}
                         <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control" required>
-                        <small class="form-text text-muted">Give your game a catchy title</small>
+                        <small class="form-text text-muted">Donnez un titre accrocheur à votre jeu</small>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.genre.id_for_label }}" class="form-label">Genre</label>
@@ -40,36 +40,36 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.keywords.id_for_label }}" class="form-label">Keywords</label>
+                        <label for="{{ form.keywords.id_for_label }}" class="form-label">Mots-clés</label>
                         {{ form.keywords.errors }}
-                        <input type="text" name="{{ form.keywords.name }}" id="{{ form.keywords.id_for_label }}" class="form-control" placeholder="Enter keywords separated by commas" required>
-                        <small class="form-text text-muted">These keywords will guide the AI in generating your game concept</small>
+                        <input type="text" name="{{ form.keywords.name }}" id="{{ form.keywords.id_for_label }}" class="form-control" placeholder="Entrez des mots-clés séparés par des virgules" required>
+                        <small class="form-text text-muted">Ces mots-clés guideront l'IA dans la génération de votre concept de jeu</small>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.references.id_for_label }}" class="form-label">References (Optional)</label>
+                        <label for="{{ form.references.id_for_label }}" class="form-label">Références (Optionnel)</label>
                         {{ form.references.errors }}
-                        <input type="text" name="{{ form.references.name }}" id="{{ form.references.id_for_label }}" class="form-control" placeholder="Enter references separated by commas (optional)">
-                        <small class="form-text text-muted">Mention games or media that inspire your concept</small>
+                        <input type="text" name="{{ form.references.name }}" id="{{ form.references.id_for_label }}" class="form-control" placeholder="Entrez des références séparées par des virgules (optionnel)">
+                        <small class="form-text text-muted">Mentionnez des jeux ou médias qui inspirent votre concept</small>
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         <input type="checkbox" name="{{ form.is_public.name }}" id="{{ form.is_public.id_for_label }}" class="form-check-input" checked>
-                        <label for="{{ form.is_public.id_for_label }}" class="form-check-label">Make this game public</label>
-                        <small class="d-block form-text text-muted">Public games will be visible to all users on the home page</small>
+                        <label for="{{ form.is_public.id_for_label }}" class="form-check-label">Rendre ce jeu public</label>
+                        <small class="d-block form-text text-muted">Les jeux publics seront visibles par tous les utilisateurs</small>
                     </div>
-                    
+
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i> After submitting, our AI will generate a complete game concept including story, characters, locations, and concept art based on your inputs.
+                        <i class="fas fa-info-circle me-2"></i> Après soumission, notre IA générera un concept de jeu complet incluant l'histoire, les personnages, les lieux et des illustrations conceptuelles basées sur vos entrées.
                     </div>
-                    
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-magic me-2"></i> Generate Game Concept
+                            <i class="fas fa-magic me-2"></i> Générer un concept de jeu
                         </button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Annuler</a>
                     </div>
                 </form>
             </div>

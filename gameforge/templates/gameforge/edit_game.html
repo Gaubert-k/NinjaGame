@@ -1,24 +1,24 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Edit {{ game.title }} - GameForge{% endblock %}
+{% block title %}Modifier {{ game.title }} - GameForge{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Edit Game Concept</h3>
+                <h3 class="mb-0">Modifier le concept de jeu</h3>
             </div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre</label>
                         {{ form.title.errors }}
                         <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control" value="{{ form.title.value }}" required>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.genre.id_for_label }}" class="form-label">Genre</label>
@@ -39,30 +39,30 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.keywords.id_for_label }}" class="form-label">Keywords</label>
+                        <label for="{{ form.keywords.id_for_label }}" class="form-label">Mots-clés</label>
                         {{ form.keywords.errors }}
                         <input type="text" name="{{ form.keywords.name }}" id="{{ form.keywords.id_for_label }}" class="form-control" value="{{ form.keywords.value }}" required>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="{{ form.references.id_for_label }}" class="form-label">References (Optional)</label>
+                        <label for="{{ form.references.id_for_label }}" class="form-label">Références (Optionnel)</label>
                         {{ form.references.errors }}
                         <input type="text" name="{{ form.references.name }}" id="{{ form.references.id_for_label }}" class="form-control" value="{{ form.references.value }}">
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         <input type="checkbox" name="{{ form.is_public.name }}" id="{{ form.is_public.id_for_label }}" class="form-check-input" {% if form.is_public.value %}checked{% endif %}>
-                        <label for="{{ form.is_public.id_for_label }}" class="form-check-label">Make this game public</label>
-                        <small class="d-block form-text text-muted">Public games will be visible to all users on the home page</small>
+                        <label for="{{ form.is_public.id_for_label }}" class="form-check-label">Rendre ce jeu public</label>
+                        <small class="d-block form-text text-muted">Les jeux publics seront visibles par tous les utilisateurs sur la page d'accueil</small>
                     </div>
-                    
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i> Save Changes
+                            <i class="fas fa-save me-2"></i> Enregistrer les modifications
                         </button>
-                        <a href="{% url 'game_detail' game.id %}" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="{% url 'game_detail' game.id %}" class="btn btn-outline-secondary">Annuler</a>
                     </div>
                 </form>
             </div>

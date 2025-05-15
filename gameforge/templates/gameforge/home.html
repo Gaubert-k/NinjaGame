@@ -1,27 +1,27 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Home - GameForge{% endblock %}
+{% block title %}Accueil - GameForge{% endblock %}
 
 {% block content %}
-<div class="jumbotron bg-light p-5 rounded mb-4">
-    <h1 class="display-4">Welcome to GameForge</h1>
-    <p class="lead">Create amazing game concepts with the power of AI</p>
+<div class="jumbotron bg-light p-5 rounded mb-4 pixel-border">
+    <h1 class="display-4">Bienvenue sur GameForge</h1>
+    <p class="lead">Créez des concepts de jeux incroyables avec la puissance de l'IA</p>
     <hr class="my-4">
-    <p>GameForge helps you generate game ideas, characters, stories, and even concept art using artificial intelligence.</p>
+    <p>GameForge vous aide à générer des idées de jeux, des personnages, des histoires et même des illustrations conceptuelles en utilisant l'intelligence artificielle.</p>
     {% if not user.is_authenticated %}
     <div class="mt-4">
-        <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-2">Get Started</a>
-        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg">Login</a>
+        <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-2">Commencer</a>
+        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg">Connexion</a>
     </div>
     {% else %}
     <div class="mt-4">
-        <a href="{% url 'create_game' %}" class="btn btn-primary btn-lg me-2">Create New Game</a>
-        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary btn-lg">Generate Random Game</a>
+        <a href="{% url 'create_game' %}" class="btn btn-primary btn-lg me-2">Créer un Nouveau Jeu</a>
+        <a href="{% url 'random_game' %}" class="btn btn-outline-secondary btn-lg">Générer un Jeu Aléatoire</a>
     </div>
     {% endif %}
 </div>
 
-<h2 class="mb-4">Recently Created Games</h2>
+<h2 class="mb-4">Jeux Récemment Créés</h2>
 
 {% if games %}
 <div class="row">
@@ -42,10 +42,10 @@
                     <span class="badge bg-secondary">{{ game.get_ambiance_display }}</span>
                 </p>
                 <p class="card-text">{{ game.story_premise|truncatechars:100 }}</p>
-                <p class="card-text"><small class="text-muted">Created by {{ game.creator.username }} on {{ game.created_at|date:"M d, Y" }}</small></p>
+                <p class="card-text"><small class="text-muted">Créé par {{ game.creator.username }} le {{ game.created_at|date:"d M Y" }}</small></p>
             </div>
             <div class="card-footer bg-transparent border-top-0">
-                <a href="{% url 'game_detail' game.id %}" class="btn btn-primary">View Details</a>
+                <a href="{% url 'game_detail' game.id %}" class="btn btn-primary">Voir les Détails</a>
             </div>
         </div>
     </div>
@@ -56,11 +56,11 @@
 </div>
 {% else %}
 <div class="alert alert-info">
-    <p>No games have been created yet. Be the first to create one!</p>
+    <p>Aucun jeu n'a encore été créé. Soyez le premier à en créer un !</p>
     {% if user.is_authenticated %}
-    <a href="{% url 'create_game' %}" class="btn btn-primary mt-2">Create Game</a>
+    <a href="{% url 'create_game' %}" class="btn btn-primary mt-2">Créer un Jeu</a>
     {% else %}
-    <a href="{% url 'register' %}" class="btn btn-primary mt-2">Register to Create</a>
+    <a href="{% url 'register' %}" class="btn btn-primary mt-2">S'inscrire pour Créer</a>
     {% endif %}
 </div>
 {% endif %}

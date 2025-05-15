@@ -2,10 +2,13 @@ import random
 import os
 import json
 import re
+import io
+
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
+from huggingface_hub import InferenceClient
 import logging
 try:
     from .models import AISettings
@@ -223,7 +226,7 @@ def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2):
             # Utiliser le LLM distant
             payload = {
                 "prompt": full_prompt,
-                "max_tokens": max_new_tokens,
+                "max_tokens": 200,#"max_tokens": max_new_tokens,
                 "temperature": temperature,
                 "top_p": top_p,
                 "repetition_penalty": repetition_penalty,
@@ -347,7 +350,7 @@ def generate_story(title, genre, ambiance, keywords=None, refs= None, random_mod
         Le titre doit être court (2-5 mots maximum) et évocateur.
         """
         premise_prompt = f"""
-        
+
         {base_context}
         Rédige un synopsis captivant pour ce jeu qui présente:
         - L'univers et son ambiance {ambiance}
@@ -548,8 +551,68 @@ def generate_locations(game_ambiance, count=2):
 
 def generate_placeholder_image(prompt, image_type, filename):
     """
-    Génère une image placeholder avec du texte.
-    Dans une implémentation réelle, cela appellerait une API de génération d'images.
+    Génère une image en utilisant le modèle de Hugging Face.
+
+    Args:
+        prompt (str): Le prompt de génération d'image
+        image_type (str): Type d'image (CHARACTER, LOCATION, CONCEPT)
+        filename (str): Nom de fichier pour sauvegarder l'image
+
+    Returns:
+        str: Chemin vers l'image générée
+    """
+    print("GENERATION D'IMAGE PLACEHOLDER")
+    try:
+        # Vérifier si le token Hugging Face est disponible
+        huggingface_token = os.environ.get("HUGGINGFACE_API_KEY")
+
+        if huggingface_token:
+            # Initialiser l'InferenceClient avec le token
+            client = InferenceClient(
+                provider="cerebras",
+                api_key=huggingface_token,
+            )
+
+            # Adapter le prompt en fonction du type d'image
+            if image_type == 'CHARACTER':
+                enhanced_prompt = f"Character portrait, {prompt}, detailed, fantasy style"
+            elif image_type == 'LOCATION':
+                enhanced_prompt = f"Fantasy location, {prompt}, detailed landscape, atmospheric"
+            else:  # CONCEPT
+                enhanced_prompt = f"Game concept art, {prompt}, detailed illustration"
+
+            # Génération d'image avec le client Hugging Face
+            image_bytes = client.text_to_image(
+                model="stabilityai/stable-diffusion-xl-base-1.0",
+                prompt=enhanced_prompt,
+                negative_prompt="low quality, blurry, distorted, deformed, bad anatomy, ugly",
+                height=512,
+                width=512,
+            )
+
+            # Créer le dossier de destination s'il n'existe pas
+            os.makedirs(os.path.join(settings.MEDIA_ROOT, 'game_images'), exist_ok=True)
+
+            # Sauvegarder l'image
+            media_path = os.path.join(settings.MEDIA_ROOT, 'game_images', filename)
+            with open(media_path, 'wb') as f:
+                f.write(image_bytes)
+
+            # Retourner le chemin relatif pour la base de données
+            return os.path.join('game_images', filename)
+        else:
+            logger.warning("Token Hugging Face non disponible, utilisation de l'image placeholder")
+            return generate_fallback_image(prompt, image_type, filename)
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération de l'image: {e}")
+        # Fallback à l'image placeholder en cas d'erreur
+        return generate_fallback_image(prompt, image_type, filename)
+
+
+def generate_fallback_image(prompt, image_type, filename):
+    """
+    Génère une image placeholder avec du texte en cas d'échec de l'API Hugging Face.
 
     Args:
         prompt (str): Le prompt de génération d'image
@@ -601,9 +664,12 @@ def generate_placeholder_image(prompt, image_type, filename):
             y_position += 30
 
         # Ajouter une note indiquant qu'il s'agit d'une image placeholder
-        d.text((50, 500), "Ceci est une image placeholder. Dans une implémentation réelle,", fill=(255, 255, 255),
+        d.text((50, 500), "Ceci est une image placeholder. Ajoutez HUGGINGFACE_TOKEN", fill=(255, 255, 255),
                font=font)
-        d.text((50, 530), "elle serait générée par un modèle d'IA.", fill=(255, 255, 255), font=font)
+        d.text((50, 530), "dans le fichier .ENV pour générer des images avec l'IA.", fill=(255, 255, 255), font=font)
+
+        # Créer le dossier de destination s'il n'existe pas
+        os.makedirs(os.path.join(settings.MEDIA_ROOT, 'game_images'), exist_ok=True)
 
         # Sauvegarder l'image
         media_path = os.path.join(settings.MEDIA_ROOT, 'game_images', filename)

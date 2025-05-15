@@ -9,6 +9,11 @@
         border-radius: 10px;
         padding: 20px;
         margin-bottom: 20px;
+        color: #333; /* Dark text color for better visibility on light background */
+    }
+    .story-section h4 {
+        color: #0f0f6b; /* Dark blue color for headings */
+        margin-bottom: 10px;
     }
     .character-card, .location-card {
         height: 100%;
@@ -29,7 +34,7 @@
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div>
         <h1 class="mb-0">{{ game.title }}</h1>
-        <p class="text-muted">Created by {{ game.creator.username }} on {{ game.created_at|date:"F d, Y" }}</p>
+        <p class="text-muted">Créé par {{ game.creator.username }} le {{ game.created_at|date:"d F Y" }}</p>
     </div>
     <div class="d-flex align-items-center">
         {% if user.is_authenticated %}
@@ -37,14 +42,14 @@
             <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart fa-2x"></i>
         </span>
         {% endif %}
-        
+
         {% if user == game.creator %}
         <div class="btn-group">
             <a href="{% url 'edit_game' game.id %}" class="btn btn-outline-primary">
-                <i class="fas fa-edit me-1"></i> Edit
+                <i class="fas fa-edit me-1"></i> Modifier
             </a>
             <a href="{% url 'delete_game' game.id %}" class="btn btn-outline-danger">
-                <i class="fas fa-trash-alt me-1"></i> Delete
+                <i class="fas fa-trash-alt me-1"></i> Supprimer
             </a>
         </div>
         {% endif %}
@@ -55,65 +60,65 @@
     <div class="col-md-8">
         <div class="card mb-4">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Game Overview</h3>
+                <h3 class="mb-0">Aperçu du Jeu</h3>
             </div>
             <div class="card-body">
                 <div class="mb-3">
                     <span class="badge bg-primary me-1">{{ game.get_genre_display }}</span>
                     <span class="badge bg-secondary me-1">{{ game.get_ambiance_display }}</span>
                     <span class="badge {% if game.is_public %}bg-success{% else %}bg-danger{% endif %}">
-                        {% if game.is_public %}Public{% else %}Private{% endif %}
+                        {% if game.is_public %}Public{% else %}Privé{% endif %}
                     </span>
                 </div>
-                
-                <h5>Keywords</h5>
+
+                <h5>Mots-clés</h5>
                 <p>{{ game.keywords }}</p>
-                
+
                 {% if game.references %}
-                <h5>References</h5>
+                <h5>Références</h5>
                 <p>{{ game.references }}</p>
                 {% endif %}
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Story</h3>
+                <h3 class="mb-0">Histoire</h3>
             </div>
             <div class="card-body">
                 <div class="story-section">
-                    <h4>Premise</h4>
+                    <h4>Prémisse</h4>
                     <p>{{ game.story_premise }}</p>
                 </div>
-                
+
                 <div class="story-section">
-                    <h4>Act 1</h4>
+                    <h4>Acte 1</h4>
                     <p>{{ game.story_act1 }}</p>
                 </div>
-                
+
                 <div class="story-section">
-                    <h4>Act 2</h4>
+                    <h4>Acte 2</h4>
                     <p>{{ game.story_act2 }}</p>
                 </div>
-                
+
                 <div class="story-section">
-                    <h4>Act 3</h4>
+                    <h4>Acte 3</h4>
                     <p>{{ game.story_act3 }}</p>
                 </div>
-                
+
                 <div class="story-section">
-                    <h4>Twist</h4>
+                    <h4>Rebondissement</h4>
                     <p>{{ game.story_twist }}</p>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         {% if images %}
         <div class="card mb-4">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Concept Art</h3>
+                <h3 class="mb-0">Art Conceptuel</h3>
             </div>
             <div class="card-body p-0">
                 <div id="gameImageCarousel" class="carousel slide" data-bs-ride="carousel">
@@ -130,11 +135,11 @@
                     </div>
                     <button class="carousel-control-prev" type="button" data-bs-target="#gameImageCarousel" data-bs-slide="prev">
                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
+                        <span class="visually-hidden">Précédent</span>
                     </button>
                     <button class="carousel-control-next" type="button" data-bs-target="#gameImageCarousel" data-bs-slide="next">
                         <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
+                        <span class="visually-hidden">Suivant</span>
                     </button>
                 </div>
             </div>
@@ -145,9 +150,9 @@
 
 <div class="row mb-4">
     <div class="col-12">
-        <h2>Characters</h2>
+        <h2>Personnages</h2>
     </div>
-    
+
     {% if characters %}
     {% for character in characters %}
     <div class="col-md-6 col-lg-4 mb-4">
@@ -157,9 +162,9 @@
                 <div class="small text-muted">{{ character.character_class }} - {{ character.role }}</div>
             </div>
             <div class="card-body">
-                <h5>Background</h5>
+                <h5>Histoire</h5>
                 <p>{{ character.background }}</p>
-                
+
                 <h5>Gameplay</h5>
                 <p>{{ character.gameplay }}</p>
             </div>
@@ -168,16 +173,16 @@
     {% endfor %}
     {% else %}
     <div class="col-12">
-        <div class="alert alert-info">No characters have been created for this game yet.</div>
+        <div class="alert alert-info">Aucun personnage n'a encore été créé pour ce jeu.</div>
     </div>
     {% endif %}
 </div>
 
 <div class="row">
     <div class="col-12">
-        <h2>Locations</h2>
+        <h2>Lieux</h2>
     </div>
-    
+
     {% if locations %}
     {% for location in locations %}
     <div class="col-md-6 mb-4">
@@ -193,7 +198,7 @@
     {% endfor %}
     {% else %}
     <div class="col-12">
-        <div class="alert alert-info">No locations have been created for this game yet.</div>
+        <div class="alert alert-info">Aucun lieu n'a encore été créé pour ce jeu.</div>
     </div>
     {% endif %}
 </div>
@@ -206,7 +211,7 @@
         $('.favorite-btn').click(function() {
             const gameId = $(this).data('game-id');
             const btn = $(this);
-            
+
             $.ajax({
                 url: `/game/${gameId}/toggle-favorite/`,
                 type: 'POST',
@@ -227,7 +232,7 @@
                     }
                 },
                 error: function() {
-                    alert('An error occurred. Please try again.');
+                    alert('Une erreur est survenue. Veuillez réessayer.');
                 }
             });
         });

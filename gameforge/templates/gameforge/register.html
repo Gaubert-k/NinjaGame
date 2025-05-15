@@ -1,13 +1,13 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Register - GameForge{% endblock %}
+{% block title %}Inscription - GameForge{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Register</h3>
+                <h3 class="mb-0">Inscription</h3>
             </div>
             <div class="card-body">
                 <form method="post">
@@ -24,10 +24,10 @@
                     </div>
                     {% endfor %}
                     
-                    <button type="submit" class="btn btn-primary">Register</button>
+                    <button type="submit" class="btn btn-primary">Inscription</button>
                 </form>
                 <hr>
-                <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+                <p>Vous avez déjà un compte ? <a href="{% url 'login' %}">Connexion</a></p>
             </div>
         </div>
     </div>

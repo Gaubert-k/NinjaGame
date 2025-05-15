@@ -1,31 +1,31 @@
 {% extends 'gameforge/base.html' %}
 
-{% block title %}Generate Random Game - GameForge{% endblock %}
+{% block title %}Générer un jeu aléatoire - GameForge{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h3 class="mb-0">Generate Random Game</h3>
+                <h3 class="mb-0">Générer un jeu aléatoire</h3>
             </div>
             <div class="card-body text-center">
                 <div class="py-4">
                     <i class="fas fa-random fa-5x mb-4 text-primary"></i>
-                    <h4 class="mb-3">Let AI Surprise You!</h4>
-                    <p class="lead">Our AI will generate a completely random game concept with unique story, characters, and locations.</p>
-                    
+                    <h4 class="mb-3">Laisser l'IA vous faire une surprise</h4>
+                    <p class="lead">Notre IA va vous générer un concept de jeu totalement aléatoire avec des histoires uniques, des personnages et une histoire palpitante.</p>
+
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i> This will create a new game in your dashboard with randomly generated content.
+                        <i class="fas fa-info-circle me-2"></i> Ceci va créer un jeu totalement aléatoire qui se retrouvera dans votre tableau de bord.
                     </div>
-                    
+
                     <form method="post">
                         {% csrf_token %}
                         <div class="d-grid gap-2 col-md-6 mx-auto">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-dice me-2"></i> Generate Random Game
+                                <i class="fas fa-dice me-2"></i> Générer un jeu aléatoire
                             </button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Annuler</a>
                         </div>
                     </form>
                 </div>
