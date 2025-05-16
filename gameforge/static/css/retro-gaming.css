@@ -1,0 +1,216 @@
+/* Retro Gaming Style CSS */
+
+/* Import pixel fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+/* Base styles */
+body {
+    font-family: 'Press Start 2P', cursive;
+    background-color: #000;
+    color: #fff;
+    line-height: 1.6;
+    padding-top: 70px;
+    background-image: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" fill="%23111"/><rect x="10" y="10" width="10" height="10" fill="%23111"/></svg>');
+    background-size: 20px 20px;
+}
+
+/* Navbar styling */
+.navbar {
+    background-color: #0f0f6b !important;
+    border-bottom: 4px solid #ff00ff;
+    box-shadow: 0 4px 0 #00ffff;
+}
+
+.navbar-brand {
+    font-family: 'Press Start 2P', cursive;
+    color: #7a7a21 !important;
+    text-shadow: 2px 2px 0 #ff00ff, 4px 4px 0 #0000ff;
+    padding: 10px;
+}
+
+.nav-link {
+    color: #00ffff !important;
+    margin: 0 5px;
+    padding: 5px 10px;
+    transition: all 0.3s;
+}
+
+.nav-link:hover {
+    color: #737317 !important;
+    background-color: #ff00ff;
+    transform: scale(1.05);
+}
+
+/* Card styling */
+.card {
+    background-color: #222;
+    border: 4px solid #00ffff;
+    border-radius: 0;
+    box-shadow: 5px 5px 0 #ff00ff;
+    margin-bottom: 20px;
+    transition: all 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 8px 8px 0 #ff00ff;
+}
+
+.card-header {
+    background-color: #0f0f6b;
+    color: #939300;
+    border-bottom: 4px solid #00ffff;
+    font-family: 'Press Start 2P', cursive;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Button styling */
+.btn {
+    font-family: 'Press Start 2P', cursive;
+    border-radius: 0;
+    border: 3px solid #000;
+    box-shadow: 3px 3px 0 #000;
+    padding: 8px 16px;
+    margin: 5px;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 5px 5px 0 #000;
+}
+
+.btn-primary {
+    background-color: #0f0f6b;
+    border-color: #00ffff;
+    color: #7d7d07;
+}
+
+.btn-success {
+    background-color: #008800;
+    border-color: #00ff00;
+    color: #fff;
+}
+
+.btn-danger {
+    background-color: #880000;
+    border-color: #ff0000;
+    color: #fff;
+}
+
+/* Form styling */
+.form-control {
+    background-color: #222;
+    border: 3px solid #00ffff;
+    border-radius: 0;
+    color: #fff;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.form-control:focus {
+    background-color: #333;
+    border-color: #ff00ff;
+    box-shadow: 0 0 0 0.25rem rgba(255, 0, 255, 0.25);
+    color: #fff;
+}
+
+label {
+    color: #00ffff;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Form help text styling */
+.form-text, .text-muted {
+    color: #00ffff !important;
+    font-size: 0.7em;
+    margin-top: 5px;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 0;
+    border: 3px solid #000;
+    font-family: 'Press Start 2P', cursive;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background-color: #008800;
+    color: #fff;
+    border-color: #00ff00;
+}
+
+.alert-danger {
+    background-color: #880000;
+    color: #fff;
+    border-color: #ff0000;
+}
+
+/* Footer styling */
+.footer {
+    background-color: #0f0f6b;
+    color: #00ffff;
+    padding: 20px 0;
+    border-top: 4px solid #ff00ff;
+    margin-top: 30px;
+    font-size: 0.8em;
+}
+
+/* Game card image */
+.game-card-img {
+    border: 3px solid #00ffff;
+    image-rendering: pixelated;
+}
+
+/* Pixelated borders */
+.pixel-border {
+    position: relative;
+}
+
+.pixel-border::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
+    z-index: -1;
+    clip-path: polygon(
+        0% 5px, 5px 5px, 5px 0%, calc(100% - 5px) 0%, calc(100% - 5px) 5px, 100% 5px,
+        100% calc(100% - 5px), calc(100% - 5px) calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 5px calc(100% - 5px), 0% calc(100% - 5px)
+    );
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.navbar-brand {
+    animation: pulse 2s infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding-top: 60px;
+    }
+
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+
+    .btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
