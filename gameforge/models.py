@@ -146,11 +146,11 @@ class Favorite(models.Model):
         return f"{self.user.username} a ajouté {self.game.title} aux favoris"
 
 class AISettings(models.Model):
-    """Modèle pour stocker les paramètres d'IA pour l'application."""
+    """Modèle pour stocker les paramètres d'IA globaux pour l'application."""
     use_remote_llm = models.BooleanField(default=False, 
                                         help_text="Utiliser un LLM distant au lieu du modèle local", 
                                         verbose_name="Utiliser LLM distant")
-    remote_llm_url = models.CharField(max_length=255, default="http://176.144.45.42:80",
+    remote_llm_url = models.CharField(max_length=255, default="http://127.0.0.1:1234",
                                      help_text="URL de l'API LLM distante",
                                      verbose_name="URL du LLM distant")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
@@ -158,15 +158,7 @@ class AISettings(models.Model):
 
     class Meta:
         verbose_name = "Paramètres d'IA"
-        verbose_name_plural = "Paramètres d'IA""Modèle pour stocker les paramètres d'IA pour l'application."""
-    use_remote_llm = models.BooleanField(default=False,
-                                        help_text="Utiliser un LLM distant au lieu du modèle local",
-                                        verbose_name="Utiliser LLM distant")
-    remote_llm_url = models.CharField(max_length=255, default="http://127.0.0.1:1234",
-                                     help_text="URL de l'API LLM distante",
-                                     verbose_name="URL du LLM distant")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
-    updated_at = models.Date
+        verbose_name_plural = "Paramètres d'IA"
 
     def save(self, *args, **kwargs):
         # Ensure there's only one instance of AISettings
@@ -191,3 +183,48 @@ class AISettings(models.Model):
 
     def __str__(self):
         return "AI Settings"
+
+class UserAISettings(models.Model):
+    """Modèle pour stocker les paramètres d'IA spécifiques à chaque utilisateur."""
+
+    AI_SERVICE_CHOICES = [
+        ('LOCAL', 'IA Locale'),
+        ('HUGGINGFACE', 'Hugging Face'),
+        ('LMSTUDIO', 'LM Studio'),
+        ('CHATGPT', 'ChatGPT'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='ai_settings', 
+                               verbose_name="Utilisateur")
+    ai_service = models.CharField(max_length=20, choices=AI_SERVICE_CHOICES, default='LOCAL',
+                                 verbose_name="Service d'IA", 
+                                 help_text="Choisissez le service d'IA à utiliser pour la génération")
+
+    # Tokens for different services
+    huggingface_token = models.CharField(max_length=255, blank=True, null=True,
+                                        verbose_name="Token Hugging Face",
+                                        help_text="Token d'API pour Hugging Face")
+    chatgpt_token = models.CharField(max_length=255, blank=True, null=True,
+                                    verbose_name="Token ChatGPT",
+                                    help_text="Token d'API pour ChatGPT")
+
+    # LM Studio settings
+    lmstudio_url = models.CharField(max_length=255, default="http://127.0.0.1:1234",
+                                   blank=True, null=True,
+                                   verbose_name="URL LM Studio",
+                                   help_text="URL de l'API LM Studio locale")
+
+    # Image generation settings
+    generate_images = models.BooleanField(default=True,
+                                         verbose_name="Générer des images",
+                                         help_text="Activer la génération d'images")
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Créé le")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Mis à jour le")
+
+    class Meta:
+        verbose_name = "Paramètres d'IA utilisateur"
+        verbose_name_plural = "Paramètres d'IA utilisateurs"
+
+    def __str__(self):
+        return f"Paramètres d'IA de {self.user.username}"

@@ -8,9 +8,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-from .ai_utils import generate_story, generate_characters, generate_locations, generate_placeholder_image
-from .models import Game, Character, Location, GameImage, Favorite
-from .forms import GameForm
+from .ai_utils import generate_story, generate_characters, generate_locations, generate_placeholder_image, check_model_status
+from .models import Game, Character, Location, GameImage, Favorite, UserAISettings
+from .forms import GameForm, UserAISettingsForm
 
 from dotenv import load_dotenv
 
@@ -182,6 +182,9 @@ def generate_game_content(game, random=False):
     """Helper function to generate game content using AI"""
     # Utiliser les fonctions AI pour générer du contenu
 
+    # Get the user from the game
+    user = game.creator
+
     # Générer l'histoire avec l'IA
     story = generate_story(
         title=game.title,
@@ -189,7 +192,8 @@ def generate_game_content(game, random=False):
         ambiance=game.ambiance,
         keywords=game.keywords,
         refs=game.references,
-        random_mode=random
+        random_mode=random,
+        user=user
     )
 
     # Mettre à jour les champs du jeu avec l'histoire générée
@@ -202,7 +206,7 @@ def generate_game_content(game, random=False):
     game.save()
 
     # Générer des personnages avec l'IA (2 par défaut: un protagoniste et un antagoniste)
-    characters = generate_characters(game_genre=game.genre, count=2)
+    characters = generate_characters(game_genre=game.genre, count=2, user=user)
 
     # Créer les objets Character dans la base de données
     for char_data in characters:
@@ -216,7 +220,7 @@ def generate_game_content(game, random=False):
         )
 
     # Générer des lieux avec l'IA
-    locations = generate_locations(game_ambiance=game.ambiance, count=2)
+    locations = generate_locations(game_ambiance=game.ambiance, count=2, user=user)
 
     # Créer les objets Location dans la base de données
     for loc_data in locations:
@@ -235,7 +239,8 @@ def generate_game_content(game, random=False):
     char_image_path = generate_placeholder_image(
         prompt=char_prompt,
         image_type="CHARACTER",
-        filename=char_filename
+        filename=char_filename,
+        user=user
     )
 
     # Créer l'objet GameImage pour le personnage
@@ -252,7 +257,8 @@ def generate_game_content(game, random=False):
     loc_image_path = generate_placeholder_image(
         prompt=loc_prompt,
         image_type="LOCATION",
-        filename=loc_filename
+        filename=loc_filename,
+        user=user
     )
 
     # Créer l'objet GameImage pour le lieu
@@ -262,6 +268,30 @@ def generate_game_content(game, random=False):
         prompt=loc_prompt,
         image=loc_image_path
     )
+
+@login_required
+def ai_settings(request):
+    """View for managing user AI settings"""
+    # Get or create user AI settings
+    user_settings, created = UserAISettings.objects.get_or_create(user=request.user)
+
+    # Check AI model status
+    model_status = check_model_status()
+
+    if request.method == 'POST':
+        form = UserAISettingsForm(request.POST, instance=user_settings)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Paramètres d'IA mis à jour avec succès!")
+            return redirect('dashboard')
+    else:
+        form = UserAISettingsForm(instance=user_settings)
+
+    return render(request, 'gameforge/ai_settings.html', {
+        'form': form,
+        'model_status': model_status,
+        'user_settings': user_settings
+    })
 
 def logout_view(request):
     logout(request)

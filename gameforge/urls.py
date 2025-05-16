@@ -20,4 +20,7 @@ urlpatterns = [
     path('game/<int:game_id>/toggle-favorite/', views.toggle_favorite, name='toggle_favorite'),
 
     path('random-game/', views.random_game, name='random_game'),
+
+    # AI Settings URL
+    path('ai-settings/', views.ai_settings, name='ai_settings'),
 ]

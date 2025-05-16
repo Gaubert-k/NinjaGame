@@ -1,5 +1,5 @@
 from django import forms
-from .models import Game, Character, Location, GameImage
+from .models import Game, Character, Location, GameImage, UserAISettings
 
 class GameForm(forms.ModelForm):
     class Meta:
@@ -56,4 +56,28 @@ class GameImageForm(forms.ModelForm):
         labels = {
             'image_type': 'Type d\'image',
             'prompt': 'Prompt',
+        }
+
+class UserAISettingsForm(forms.ModelForm):
+    class Meta:
+        model = UserAISettings
+        fields = ['ai_service', 'huggingface_token', 'chatgpt_token', 'lmstudio_url', 'generate_images']
+        widgets = {
+            'huggingface_token': forms.PasswordInput(attrs={'placeholder': 'Entrez votre token Hugging Face'}, render_value=True),
+            'chatgpt_token': forms.PasswordInput(attrs={'placeholder': 'Entrez votre token ChatGPT'}, render_value=True),
+            'lmstudio_url': forms.TextInput(attrs={'placeholder': 'http://127.0.0.1:1234'}),
+        }
+        labels = {
+            'ai_service': 'Service d\'IA',
+            'huggingface_token': 'Token Hugging Face',
+            'chatgpt_token': 'Token ChatGPT',
+            'lmstudio_url': 'URL LM Studio',
+            'generate_images': 'Générer des images',
+        }
+        help_texts = {
+            'ai_service': 'Choisissez le service d\'IA à utiliser pour la génération de contenu',
+            'huggingface_token': 'Requis pour utiliser Hugging Face',
+            'chatgpt_token': 'Requis pour utiliser ChatGPT',
+            'lmstudio_url': 'URL de l\'API LM Studio (généralement http://127.0.0.1:1234)',
+            'generate_images': 'Activer ou désactiver la génération d\'images',
         }

@@ -10,10 +10,12 @@ from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
 from huggingface_hub import InferenceClient
 import logging
+import openai
 try:
-    from .models import AISettings
+    from .models import AISettings, UserAISettings
 except ImportError:
     AISettings = None
+    UserAISettings = None
 
 try:
     from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
@@ -85,21 +87,55 @@ def clean_llm_output(text):
 
     return cleaned_text
 
-def get_ai_settings():
+def get_ai_settings(user=None):
     global USE_REMOTE_LLM, REMOTE_LLM_URL
 
+    # If user is provided and has AI settings, use those
+    if user and user.is_authenticated and UserAISettings is not None:
+        try:
+            user_settings, created = UserAISettings.objects.get_or_create(user=user)
 
+            # Determine if we should use a remote LLM based on the user's AI service choice
+            if user_settings.ai_service != 'LOCAL':
+                USE_REMOTE_LLM = True
+
+                # Set the appropriate URL based on the service
+                if user_settings.ai_service == 'LMSTUDIO' and user_settings.lmstudio_url:
+                    REMOTE_LLM_URL = user_settings.lmstudio_url
+                elif user_settings.ai_service == 'HUGGINGFACE':
+                    # For Hugging Face, we'll use the token directly in the API calls
+                    # but we still need to set USE_REMOTE_LLM
+                    REMOTE_LLM_URL = None
+                elif user_settings.ai_service == 'CHATGPT':
+                    # For ChatGPT, we'll use the OpenAI API directly
+                    # but we still need to set USE_REMOTE_LLM
+                    REMOTE_LLM_URL = None
+                else:
+                    # Fallback to default remote URL
+                    REMOTE_LLM_URL = settings.REMOTE_LLM_URL
+            else:
+                # Use local LLM
+                USE_REMOTE_LLM = False
+                REMOTE_LLM_URL = None
+
+            return user_settings
+        except Exception as e:
+            logger.error(f"Error getting user AI settings: {e}")
+
+    # Fallback to global settings if no user or error occurred
     if AISettings is not None:
         try:
             ai_settings = AISettings.get_settings()
             USE_REMOTE_LLM = ai_settings.use_remote_llm
             REMOTE_LLM_URL = ai_settings.remote_llm_url
-            return
+            return ai_settings
         except Exception as e:
             logger.error(f"Error getting AI settings from database: {e}")
 
+    # Final fallback to settings.py
     USE_REMOTE_LLM = settings.USE_REMOTE_LLM
     REMOTE_LLM_URL = settings.REMOTE_LLM_URL
+    return None
 
 get_ai_settings()
 
@@ -183,24 +219,26 @@ LOCATION_NAMES = [
 ]
 
 
-def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2):
+def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2, user=None):
     """
-    Génère du texte en utilisant soit le modèle local de transformers soit un LLM distant.
+    Génère du texte en utilisant le service d'IA préféré de l'utilisateur.
 
     Args:
         prompt (str): Texte de prompt pour amorcer la génération
         max_length (int, optional): Longueur maximale du texte généré
         max_new_tokens (int, optional): Nombre maximum de nouveaux tokens à générer
         patience (int, optional): Niveau de patience (1-3) influençant les paramètres de génération
+        user (User, optional): L'utilisateur pour lequel générer du texte
 
     Returns:
         str: Le texte généré
     """
     # Reload settings in case they've changed
-    get_ai_settings()
+    user_settings = get_ai_settings(user)
 
-    if not MODEL_LOADED:
-        logger.warning(f"Modèle non chargé: {prompt}")
+    # Check if we have a valid model or user settings
+    if not MODEL_LOADED and (user_settings is None or not isinstance(user_settings, UserAISettings)):
+        logger.warning(f"Aucun modèle disponible pour: {prompt}")
         return f"{prompt} (mode texte aléatoire)"
 
     # Ajuster les paramètres selon le niveau de patience
@@ -222,11 +260,111 @@ def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2):
         unique_id = random.randint(1, 10000)
         full_prompt = f"{prompt} #{unique_id}"
 
-        if USE_REMOTE_LLM:
+        # Check if we're using a user-specific AI service
+        if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+            ai_service = user_settings.ai_service
+
+            # Handle different AI services
+            if ai_service == 'CHATGPT' and user_settings.chatgpt_token:
+                # Use ChatGPT API
+                openai.api_key = user_settings.chatgpt_token
+
+                try:
+                    response = openai.Completion.create(
+                        model="gpt-3.5-turbo-instruct",
+                        prompt=full_prompt,
+                        max_tokens=max_new_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        frequency_penalty=repetition_penalty - 1.0,  # Convert to OpenAI scale
+                        presence_penalty=0.0
+                    )
+
+                    generated_text = response.choices[0].text
+                    clean_text = clean_llm_output(generated_text.strip())
+
+                    if not clean_text or len(clean_text) < 5:
+                        logger.warning(f"Génération ChatGPT insuffisante pour: {prompt}")
+                        return generate_text(prompt, max_length, max_new_tokens, 
+                                           patience=min(patience + 1, 3), user=user)
+
+                    return clean_text
+                except Exception as e:
+                    logger.error(f"Erreur ChatGPT: {e}")
+                    return f"{prompt} (erreur ChatGPT: {str(e)[:30]}...)"
+
+            elif ai_service == 'HUGGINGFACE' and user_settings.huggingface_token:
+                # Use Hugging Face API
+                try:
+                    client = InferenceClient(token=user_settings.huggingface_token)
+
+                    response = client.text_generation(
+                        prompt=full_prompt,
+                        model="mistralai/Mistral-7B-Instruct-v0.2",
+                        max_new_tokens=max_new_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        repetition_penalty=repetition_penalty
+                    )
+
+                    # Clean the response
+                    clean_text = clean_llm_output(response.strip())
+
+                    if not clean_text or len(clean_text) < 5:
+                        logger.warning(f"Génération Hugging Face insuffisante pour: {prompt}")
+                        return generate_text(prompt, max_length, max_new_tokens, 
+                                           patience=min(patience + 1, 3), user=user)
+
+                    return clean_text
+                except Exception as e:
+                    logger.error(f"Erreur Hugging Face: {e}")
+                    return f"{prompt} (erreur Hugging Face: {str(e)[:30]}...)"
+
+            elif ai_service == 'LMSTUDIO' and user_settings.lmstudio_url:
+                # Use LM Studio API
+                lmstudio_url = user_settings.lmstudio_url
+
+                payload = {
+                    "prompt": full_prompt,
+                    "max_tokens": max_new_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "repetition_penalty": repetition_penalty,
+                    "stop": []
+                }
+
+                try:
+                    response = requests.post(
+                        f"{lmstudio_url}/v1/completions",
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=30
+                    )
+
+                    if response.status_code == 200:
+                        result = response.json()
+                        generated_text = result.get("choices", [{}])[0].get("text", "")
+                        clean_text = clean_llm_output(generated_text.strip())
+
+                        if not clean_text or len(clean_text) < 5:
+                            logger.warning(f"Génération LM Studio insuffisante pour: {prompt}")
+                            return generate_text(prompt, max_length, max_new_tokens, 
+                                               patience=min(patience + 1, 3), user=user)
+
+                        return clean_text
+                    else:
+                        logger.error(f"Erreur API LM Studio: {response.status_code} - {response.text}")
+                        return f"{prompt} (erreur API LM Studio: {response.status_code})"
+                except Exception as e:
+                    logger.error(f"Erreur de connexion à LM Studio: {e}")
+                    return f"{prompt} (erreur de connexion à LM Studio: {str(e)[:30]}...)"
+
+        # Fallback to standard remote or local LLM
+        if USE_REMOTE_LLM and REMOTE_LLM_URL:
             # Utiliser le LLM distant
             payload = {
                 "prompt": full_prompt,
-                "max_tokens": 200,#"max_tokens": max_new_tokens,
+                "max_tokens": 200,  # "max_tokens": max_new_tokens,
                 "temperature": temperature,
                 "top_p": top_p,
                 "repetition_penalty": repetition_penalty,
@@ -242,28 +380,19 @@ def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2):
 
             if response.status_code == 200:
                 result = response.json()
-
-                print("DEBUG ------ > ")
-                print(result)
-
                 generated_text = result.get("choices", [{}])[0].get("text", "")
+                clean_text = clean_llm_output(generated_text.strip())
 
-                # Nettoyer le texte généré
-                clean_text = generated_text.strip()
-
-                clean_text = clean_llm_output(clean_text)
-
-                # Si la génération échoue à produire du contenu nouveau
                 if not clean_text or len(clean_text) < 5:
                     logger.warning(f"Génération insuffisante pour: {prompt}")
-                    # Essayer à nouveau avec des paramètres différents
-                    return generate_text(prompt, max_length, max_new_tokens, patience=min(patience + 1, 3))
+                    return generate_text(prompt, max_length, max_new_tokens, 
+                                       patience=min(patience + 1, 3), user=user)
 
                 return clean_text
             else:
                 logger.error(f"Erreur API LLM distant: {response.status_code} - {response.text}")
                 return f"{prompt} (erreur API: {response.status_code})"
-        else:
+        elif TRANSFORMERS_AVAILABLE and text_generator is not None:
             # Utiliser le modèle local
             result = text_generator(
                 full_prompt,
@@ -281,45 +410,66 @@ def generate_text(prompt, max_length=150, max_new_tokens=80, patience=2):
 
             # Extraire et nettoyer le texte généré
             generated_text = result[0]['generated_text']
-
-            # Supprimer l'identifiant unique et le prompt original
             clean_text = generated_text.replace(full_prompt, "", 1).strip()
-
-            # Appliquer le nettoyage des balises <think>
             clean_text = clean_llm_output(clean_text)
 
-            # Si la génération échoue à produire du contenu nouveau
             if not clean_text or len(clean_text) < 5:
                 logger.warning(f"Génération insuffisante pour: {prompt}")
-                # Essayer à nouveau avec des paramètres différents
-                return generate_text(prompt, max_length, max_new_tokens, patience=min(patience + 1, 3))
+                return generate_text(prompt, max_length, max_new_tokens, 
+                                   patience=min(patience + 1, 3), user=user)
 
             return clean_text
+        else:
+            # No valid model available
+            logger.warning(f"Aucun modèle disponible pour: {prompt}")
+            return f"{prompt} (mode texte aléatoire)"
     except Exception as e:
         logger.error(f"Erreur lors de la génération de texte: {e}")
         return f"{prompt} (erreur: {str(e)[:30]}...)"
 
 
-def generate_story(title, genre, ambiance, keywords=None, refs= None, random_mode=False):
+def generate_story(title, genre, ambiance, keywords=None, refs=None, random_mode=False, user=None):
     """
     Génère une histoire pour un jeu basée sur le genre, l'ambiance et les mots-clés.
 
     Args:
+        title (str): Le titre du jeu
         genre (str): Le genre du jeu
         ambiance (str): L'ambiance du jeu
         keywords (str, optional): Mots-clés séparés par des virgules
+        refs (str, optional): Références séparées par des virgules
         random_mode (bool, optional): Générer du contenu complètement aléatoire
+        user (User, optional): L'utilisateur pour lequel générer l'histoire
 
     Returns:
         dict: Un dictionnaire contenant les éléments de l'histoire
     """
     logger.info(f"Génération d'histoire: {genre}, {ambiance}, mode aléatoire: {random_mode}")
 
-    if random_mode or not MODEL_LOADED:
+    # Get user settings
+    user_settings = get_ai_settings(user)
+
+    # Check if we should use random mode
+    use_random = random_mode
+
+    # If user has no valid AI settings, use random mode
+    if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+        if user_settings.ai_service == 'LOCAL' and not MODEL_LOADED:
+            use_random = True
+        elif user_settings.ai_service == 'HUGGINGFACE' and not user_settings.huggingface_token:
+            use_random = True
+        elif user_settings.ai_service == 'CHATGPT' and not user_settings.chatgpt_token:
+            use_random = True
+        elif user_settings.ai_service == 'LMSTUDIO' and not user_settings.lmstudio_url:
+            use_random = True
+    elif not MODEL_LOADED:
+        use_random = True
+
+    if use_random:
         # Contenu aléatoire (inchangé)
-        title = random.choice(GAME_TITLES)
+        random_title = random.choice(GAME_TITLES)
         story = {
-            "title": title,
+            "title": random_title,
             "premise": f"Dans un monde {ambiance.lower()}, un héros se lance dans une aventure {genre.lower()} pour sauver leur royaume d'un mal ancien.",
             "act1": f"Le héros découvre son destin et part de ses humbles origines, rassemblant des alliés et des ressources pour le voyage à venir.",
             "act2": f"Face à des défis de plus en plus difficiles, la détermination du héros est mise à l'épreuve. Ils découvrent des vérités cachées sur le monde et sur eux-mêmes.",
@@ -333,7 +483,6 @@ def generate_story(title, genre, ambiance, keywords=None, refs= None, random_mod
             key_terms += f" {keywords}"
 
         # Prompts en français pour de meilleurs résultats avec les modèles multilingues
-        # title_prompt = f"Titre original d'un jeu vidéo {genre} avec ambiance {ambiance}:"
         base_context = f"""
         CONSIGNE DE REPONSE : AUCUN SMILEY, AUCUN TEXTE GRAS , AUCUNE MISE EN FORME, JE VEUX UN TEXTE PLAT
         Génération pour un jeu vidéo avec les caractéristiques suivantes:
@@ -405,35 +554,55 @@ def generate_story(title, genre, ambiance, keywords=None, refs= None, random_mod
 
         # Générer le contenu avec patience variable
         story = {
-            "title": generate_text(title_prompt, max_length=50, max_new_tokens=15, patience=1),
-            "premise": generate_text(premise_prompt, max_length=150, max_new_tokens=80, patience=2),
-            "act1": generate_text(act1_prompt, max_length=150, max_new_tokens=80, patience=2),
-            "act2": generate_text(act2_prompt, max_length=150, max_new_tokens=80, patience=2),
-            "act3": generate_text(act3_prompt, max_length=150, max_new_tokens=80, patience=2),
-            "twist": generate_text(twist_prompt, max_length=150, max_new_tokens=80, patience=3)
+            "title": generate_text(title_prompt, max_length=50, max_new_tokens=15, patience=1, user=user),
+            "premise": generate_text(premise_prompt, max_length=150, max_new_tokens=80, patience=2, user=user),
+            "act1": generate_text(act1_prompt, max_length=150, max_new_tokens=80, patience=2, user=user),
+            "act2": generate_text(act2_prompt, max_length=150, max_new_tokens=80, patience=2, user=user),
+            "act3": generate_text(act3_prompt, max_length=150, max_new_tokens=80, patience=2, user=user),
+            "twist": generate_text(twist_prompt, max_length=150, max_new_tokens=80, patience=3, user=user)
         }
 
     return story
 
 
-def generate_characters(game_genre, count=2):
+def generate_characters(game_genre, count=2, user=None):
     """
     Génère des personnages pour un jeu.
 
     Args:
         game_genre (str): Le genre du jeu
         count (int, optional): Nombre de personnages à générer
+        user (User, optional): L'utilisateur pour lequel générer les personnages
 
     Returns:
         list: Une liste de dictionnaires de personnages
     """
     characters = []
 
+    # Get user settings
+    user_settings = get_ai_settings(user)
+
+    # Check if we should use AI generation
+    use_ai = True
+
+    # If user has no valid AI settings, use random mode
+    if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+        if user_settings.ai_service == 'LOCAL' and not MODEL_LOADED:
+            use_ai = False
+        elif user_settings.ai_service == 'HUGGINGFACE' and not user_settings.huggingface_token:
+            use_ai = False
+        elif user_settings.ai_service == 'CHATGPT' and not user_settings.chatgpt_token:
+            use_ai = False
+        elif user_settings.ai_service == 'LMSTUDIO' and not user_settings.lmstudio_url:
+            use_ai = False
+    elif not MODEL_LOADED:
+        use_ai = False
+
     # Fonctions pour générer des noms et classes aléatoires ou via modèle
     def get_name(role):
-        if MODEL_LOADED:
+        if use_ai:
             prompt = f"Un nom original pour un {role} dans un jeu {game_genre}:"
-            name = generate_text(prompt, max_length=30, max_new_tokens=10, patience=1)
+            name = generate_text(prompt, max_length=30, max_new_tokens=10, patience=1, user=user)
             # Extraire juste le premier mot significatif
             name_parts = name.split()
             if len(name_parts) > 0:
@@ -445,9 +614,9 @@ def generate_characters(game_genre, count=2):
         return random.choice(CHARACTER_NAMES)
 
     def get_class(role):
-        if MODEL_LOADED:
+        if use_ai:
             prompt = f"Une classe typique pour un {role} dans un jeu {game_genre}:"
-            class_text = generate_text(prompt, max_length=30, max_new_tokens=10, patience=1)
+            class_text = generate_text(prompt, max_length=30, max_new_tokens=10, patience=1, user=user)
             # Extraire le premier mot pertinent
             words = class_text.split()
             for word in words:
@@ -457,11 +626,11 @@ def generate_characters(game_genre, count=2):
         return random.choice(CHARACTER_CLASSES)
 
     # Toujours inclure un protagoniste
-    if MODEL_LOADED:
+    if use_ai:
         background_prompt = f"Histoire et motivations d'un protagoniste héroïque dans un jeu {game_genre}:"
         gameplay_prompt = f"Les capacités et le style de jeu d'un protagoniste dans un jeu {game_genre}:"
-        background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2)
-        gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2)
+        background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
+        gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
     else:
         background = f"Un individu déterminé avec un passé mystérieux, cherchant à trouver sa place dans le monde."
         gameplay = f"Capacités équilibrées avec potentiel de croissance dans plusieurs directions basées sur les choix du joueur."
@@ -475,11 +644,11 @@ def generate_characters(game_genre, count=2):
     })
 
     # Ajouter un antagoniste
-    if MODEL_LOADED:
+    if use_ai:
         background_prompt = f"Histoire et motivations d'un antagoniste mémorable dans un jeu {game_genre}:"
         gameplay_prompt = f"Les capacités et les tactiques d'un antagoniste dans un jeu {game_genre}:"
-        background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2)
-        gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2)
+        background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
+        gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
     else:
         background = f"Autrefois une figure respectée qui a été corrompue par le pouvoir et cherche maintenant à remodeler le monde selon sa vision."
         gameplay = f"Capacités puissantes qui défient le joueur, avec des mécaniques uniques qui doivent être comprises pour vaincre."
@@ -497,11 +666,11 @@ def generate_characters(game_genre, count=2):
         if i >= 0:  # Vérification pour éviter les indices négatifs si count < 2
             role = random.choice([r for r in CHARACTER_ROLES if r not in ["Protagonist", "Antagonist"]])
 
-            if MODEL_LOADED:
+            if use_ai:
                 background_prompt = f"Histoire et motivations d'un personnage {role.lower()} dans un jeu {game_genre}:"
                 gameplay_prompt = f"Les capacités et l'utilité d'un personnage {role.lower()} dans un jeu {game_genre}:"
-                background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2)
-                gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2)
+                background = generate_text(background_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
+                gameplay = generate_text(gameplay_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
             else:
                 background = f"Un individu unique avec ses propres motivations et son histoire, dont le chemin croise celui du protagoniste."
                 gameplay = f"Capacités spécialisées qui complètent l'équipe et fournissent des options stratégiques dans diverses situations."
@@ -517,26 +686,46 @@ def generate_characters(game_genre, count=2):
     return characters
 
 
-def generate_locations(game_ambiance, count=2):
+def generate_locations(game_ambiance, count=2, user=None):
     """
     Génère des lieux pour un jeu.
 
     Args:
         game_ambiance (str): L'ambiance du jeu
         count (int, optional): Nombre de lieux à générer
+        user (User, optional): L'utilisateur pour lequel générer les lieux
 
     Returns:
         list: Une liste de dictionnaires de lieux
     """
     locations = []
 
+    # Get user settings
+    user_settings = get_ai_settings(user)
+
+    # Check if we should use AI generation
+    use_ai = True
+
+    # If user has no valid AI settings, use random mode
+    if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+        if user_settings.ai_service == 'LOCAL' and not MODEL_LOADED:
+            use_ai = False
+        elif user_settings.ai_service == 'HUGGINGFACE' and not user_settings.huggingface_token:
+            use_ai = False
+        elif user_settings.ai_service == 'CHATGPT' and not user_settings.chatgpt_token:
+            use_ai = False
+        elif user_settings.ai_service == 'LMSTUDIO' and not user_settings.lmstudio_url:
+            use_ai = False
+    elif not MODEL_LOADED:
+        use_ai = False
+
     for i in range(count):
-        if MODEL_LOADED:
+        if use_ai:
             name_prompt = f"Un nom évocateur pour un lieu avec ambiance {game_ambiance}:"
-            name = generate_text(name_prompt, max_length=40, max_new_tokens=15, patience=1)
+            name = generate_text(name_prompt, max_length=40, max_new_tokens=15, patience=1, user=user)
 
             desc_prompt = f"Description atmosphérique d'un lieu {game_ambiance} nommé {name}:"
-            description = generate_text(desc_prompt, max_length=150, max_new_tokens=80, patience=2)
+            description = generate_text(desc_prompt, max_length=150, max_new_tokens=80, patience=2, user=user)
         else:
             name = random.choice(LOCATION_NAMES)
             description = f"Un lieu avec une ambiance {game_ambiance.lower()} avec des défis uniques et des secrets à découvrir. L'atmosphère ici reflète le ton général du monde tout en offrant des opportunités de gameplay distinctes."
@@ -549,22 +738,46 @@ def generate_locations(game_ambiance, count=2):
     return locations
 
 
-def generate_placeholder_image(prompt, image_type, filename):
+def generate_placeholder_image(prompt, image_type, filename, user=None):
     """
-    Génère une image en utilisant le modèle de Hugging Face.
+    Génère une image en utilisant le service d'IA préféré de l'utilisateur.
 
     Args:
         prompt (str): Le prompt de génération d'image
         image_type (str): Type d'image (CHARACTER, LOCATION, CONCEPT)
         filename (str): Nom de fichier pour sauvegarder l'image
+        user (User, optional): L'utilisateur pour lequel générer l'image
 
     Returns:
         str: Chemin vers l'image générée
     """
-    print("GENERATION D'IMAGE PLACEHOLDER")
+    print("GENERATION D'IMAGE")
+
+    # Get user settings
+    user_settings = get_ai_settings(user)
+
+    # Check if user has disabled image generation
+    if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+        if not user_settings.generate_images:
+            logger.info(f"Génération d'images désactivée pour l'utilisateur {user.username}")
+            return generate_fallback_image(prompt, image_type, filename, disabled=True)
+
     try:
-        # Vérifier si le token Hugging Face est disponible
-        huggingface_token = os.environ.get("HUGGINGFACE_API_KEY")
+        # Determine which token to use for Hugging Face
+        huggingface_token = None
+
+        # If user has Hugging Face settings, use those
+        if user and user.is_authenticated and isinstance(user_settings, UserAISettings):
+            if user_settings.ai_service == 'HUGGINGFACE' and user_settings.huggingface_token:
+                huggingface_token = user_settings.huggingface_token
+            elif user_settings.ai_service == 'CHATGPT' and user_settings.chatgpt_token:
+                # For ChatGPT users, we can also generate images if they have a token
+                # This would use DALL-E, but for now we'll use Hugging Face as a placeholder
+                huggingface_token = os.environ.get("HUGGINGFACE_API_KEY")
+
+        # Fallback to environment variable if no user token
+        if not huggingface_token:
+            huggingface_token = os.environ.get("HUGGINGFACE_API_KEY")
 
         if huggingface_token:
             # Initialiser l'InferenceClient avec le token
@@ -610,14 +823,16 @@ def generate_placeholder_image(prompt, image_type, filename):
         return generate_fallback_image(prompt, image_type, filename)
 
 
-def generate_fallback_image(prompt, image_type, filename):
+def generate_fallback_image(prompt, image_type, filename, disabled=False):
     """
-    Génère une image placeholder avec du texte en cas d'échec de l'API Hugging Face.
+    Génère une image placeholder avec du texte en cas d'échec de l'API Hugging Face
+    ou si la génération d'images est désactivée.
 
     Args:
         prompt (str): Le prompt de génération d'image
         image_type (str): Type d'image (CHARACTER, LOCATION, CONCEPT)
         filename (str): Nom de fichier pour sauvegarder l'image
+        disabled (bool, optional): Si True, indique que la génération d'images est désactivée
 
     Returns:
         str: Chemin vers l'image générée
@@ -663,10 +878,17 @@ def generate_fallback_image(prompt, image_type, filename):
             d.text((50, y_position), line, fill=(255, 255, 255), font=font)
             y_position += 30
 
-        # Ajouter une note indiquant qu'il s'agit d'une image placeholder
-        d.text((50, 500), "Ceci est une image placeholder. Ajoutez HUGGINGFACE_TOKEN", fill=(255, 255, 255),
-               font=font)
-        d.text((50, 530), "dans le fichier .ENV pour générer des images avec l'IA.", fill=(255, 255, 255), font=font)
+        # Ajouter une note appropriée selon le cas
+        if disabled:
+            d.text((50, 500), "Génération d'images désactivée dans les paramètres utilisateur.", 
+                   fill=(255, 255, 255), font=font)
+            d.text((50, 530), "Activez la génération d'images dans vos paramètres pour générer des images.", 
+                   fill=(255, 255, 255), font=font)
+        else:
+            d.text((50, 500), "Ceci est une image placeholder. Ajoutez un token Hugging Face", 
+                   fill=(255, 255, 255), font=font)
+            d.text((50, 530), "dans vos paramètres utilisateur pour générer des images avec l'IA.", 
+                   fill=(255, 255, 255), font=font)
 
         # Créer le dossier de destination s'il n'existe pas
         os.makedirs(os.path.join(settings.MEDIA_ROOT, 'game_images'), exist_ok=True)
